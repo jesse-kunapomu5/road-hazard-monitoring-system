@@ -1,19 +1,23 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import { useGetDashboardSummary, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 import { AnimatedMap } from "@/components/AnimatedMap";
 import { MarqueeFeed } from "@/components/MarqueeFeed";
 import { AnimatedRankingPanel } from "@/components/AnimatedRankingPanel";
 import { AnimatedSummaryCards } from "@/components/AnimatedSummaryCards";
-import { DetectionDrawer } from "@/components/DetectionDrawer";
+import { DetectionPopup } from "@/components/DetectionPopup";
 import { CountUp } from "@/components/CountUp";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { ArrowDown } from "lucide-react";
 
 export function OverviewPage() {
   const [selectedDetectionId, setSelectedDetectionId] = useState<number | null>(null);
   const { data: summary } = useGetDashboardSummary({
     query: { refetchInterval: 30000, queryKey: getGetDashboardSummaryQueryKey() },
   });
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInView = useInView(mapRef, { once: true, margin: "-100px" });
 
   const breakdown = summary ? [
     { name: "Low", value: summary.severity_breakdown.Low, color: "#4caf50" },
@@ -23,85 +27,120 @@ export function OverviewPage() {
   ] : [];
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
+    <div className="flex flex-col gap-6">
+      {/* Hero Map Section */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        ref={mapRef}
+        initial={{ opacity: 0, y: 30 }}
+        animate={mapInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="rounded-2xl overflow-hidden border border-[#e8e4df] shadow-sm bg-white relative"
+        style={{ height: "55vh", minHeight: 400 }}
       >
-        <h2 className="text-2xl font-bold text-[#2d2d2d] tracking-tight">Dashboard Overview</h2>
-        <p className="text-sm text-[#8a8a8a] mt-1">Real-time road hazard monitoring across all zones</p>
+        <AnimatedMap onMarkerClick={setSelectedDetectionId} />
+
+        {/* Floating overlay */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
+          className="absolute top-4 left-4 bg-white/90 backdrop-blur-xl rounded-xl px-4 py-3 shadow-sm border border-[#e8e4df]"
+        >
+          <h2 className="text-sm font-bold text-[#2d2d2d] tracking-tight">Live Hazard Map</h2>
+          <p className="text-[10px] text-[#8a8a8a] font-bold uppercase tracking-widest mt-0.5">Hyderabad Zone</p>
+        </motion.div>
+
+        {/* Scroll hint */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-xl rounded-full px-3 py-1.5 shadow-sm border border-[#e8e4df] flex items-center gap-1.5"
+        >
+          <motion.div
+            animate={{ y: [0, 4, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+          >
+            <ArrowDown size={12} className="text-[#8a8a8a]" />
+          </motion.div>
+          <span className="text-[10px] text-[#8a8a8a] font-bold uppercase tracking-widest">Scroll for more</span>
+        </motion.div>
       </motion.div>
 
       {/* Summary Cards */}
       <AnimatedSummaryCards />
 
-      {/* Main Content Area */}
-      <div className="flex gap-5" style={{ height: "calc(100vh - 230px)", minHeight: 520 }}>
-        {/* Map - Left side */}
-        <div className="relative flex-1 rounded-2xl overflow-hidden border border-[#e8e4df] shadow-sm bg-white min-h-0">
-          <AnimatedMap onMarkerClick={setSelectedDetectionId} />
-          {selectedDetectionId && (
-            <motion.div
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 24 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="absolute top-0 right-0 w-[400px] h-full z-20"
-            >
-              <DetectionDrawer
-                id={selectedDetectionId}
-                onClose={() => setSelectedDetectionId(null)}
-              />
-            </motion.div>
-          )}
+      {/* Bottom Section - 3 columns */}
+      <div className="grid grid-cols-3 gap-5 pb-6">
+        {/* Left - Live Feed */}
+        <div className="h-[380px]">
+          <MarqueeFeed />
         </div>
 
-        {/* Right Panels */}
-        <div className="w-[300px] shrink-0 flex flex-col gap-4 min-h-0">
-          {/* Mini donut chart */}
-          {summary && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              className="bg-white rounded-2xl border border-[#e8e4df] shadow-sm p-4 shrink-0"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-[#8a8a8a] uppercase tracking-widest">Severity Breakdown</span>
-                <span className="text-xs font-bold text-[#2d4a7c]"><CountUp end={summary.total_potholes} /> total</span>
+        {/* Center - Severity Breakdown (Clickable) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl border border-[#e8e4df] shadow-sm p-5 h-[380px] flex flex-col"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-bold text-[#8a8a8a] uppercase tracking-widest">Severity Breakdown</span>
+            <span className="text-xs font-bold text-[#2d4a7c] font-display"><CountUp end={summary?.total_potholes || 0} /> total</span>
+          </div>
+          <div className="flex-1 relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={breakdown}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={4}
+                  dataKey="value"
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {breakdown.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} cursor="pointer" />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Center text */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <p className="text-2xl font-display font-bold text-[#2d2d2d]">
+                  <CountUp end={summary?.total_potholes || 0} />
+                </p>
+                <p className="text-[9px] font-bold text-[#8a8a8a] uppercase tracking-widest">Potholes</p>
               </div>
-              <div className="h-24">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={breakdown} cx="50%" cy="50%" innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value" stroke="#fff" strokeWidth={2}>
-                      {breakdown.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-4 mt-3">
+            {breakdown.map((item) => (
+              <div key={item.name} className="flex items-center gap-1.5 cursor-pointer hover:bg-[#faf8f5] rounded-md px-2 py-1 transition-colors">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-[10px] font-bold text-[#6b6b6b]">{item.name}</span>
+                <span className="text-[10px] font-bold text-[#2d2d2d] font-display">{item.value}</span>
               </div>
-              <div className="flex items-center justify-center gap-3 mt-1">
-                {breakdown.map((item) => (
-                  <div key={item.name} className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[9px] font-bold text-[#6b6b6b]">{item.name}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+            ))}
+          </div>
+        </motion.div>
 
-          <div className="flex-1 min-h-0">
-            <MarqueeFeed />
-          </div>
-          <div className="flex-1 min-h-0">
-            <AnimatedRankingPanel />
-          </div>
+        {/* Right - Worst Roads */}
+        <div className="h-[380px]">
+          <AnimatedRankingPanel />
         </div>
       </div>
+
+      {/* Popup Modal */}
+      <DetectionPopup
+        id={selectedDetectionId}
+        onClose={() => setSelectedDetectionId(null)}
+      />
     </div>
   );
 }
