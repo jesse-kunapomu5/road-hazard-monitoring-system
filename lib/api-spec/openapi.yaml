@@ -1,15 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Road Hazard Monitoring System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: detections
+    description: Pothole detection operations
+  - name: roads
+    description: Road ranking and status
+  - name: potholes
+    description: Individual pothole metrics
+  - name: feed
+    description: Real-time detection feed
+  - name: summary
+    description: Dashboard summary statistics
 paths:
   /healthz:
     get:
@@ -24,6 +33,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /detections:
+    get:
+      operationId: listDetections
+      tags: [detections]
+      summary: List all detection hotspots
+      description: Returns all detection zones with heatmap data
+      responses:
+        "200":
+          description: List of detections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Detection"
+    post:
+      operationId: createDetection
+      tags: [detections]
+      summary: Create a new detection record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DetectionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detection"
+
+  /detections/{id}:
+    get:
+      operationId: getDetection
+      tags: [detections]
+      summary: Get a specific detection hotspot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Detection details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Detection"
+        "404":
+          description: Not found
+
+  /potholes:
+    get:
+      operationId: listPotholes
+      tags: [potholes]
+      summary: List all individual potholes
+      parameters:
+        - name: detection_id
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of potholes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pothole"
+
+  /potholes/{id}:
+    get:
+      operationId: getPothole
+      tags: [potholes]
+      summary: Get a specific pothole with full metrics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pothole details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pothole"
+        "404":
+          description: Not found
+
+  /roads/ranking:
+    get:
+      operationId: getRoadRanking
+      tags: [roads]
+      summary: Get ranked list of roads by severity
+      responses:
+        "200":
+          description: Road rankings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadRanking"
+
+  /feed:
+    get:
+      operationId: getDetectionFeed
+      tags: [feed]
+      summary: Get real-time detection feed (newest first)
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Detection feed items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeedItem"
+
+  /summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [summary]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +187,200 @@ components:
       required:
         - status
 
+    Detection:
+      type: object
+      required:
+        - id
+        - road_name
+        - latitude
+        - longitude
+        - pothole_count
+        - avg_diameter_cm
+        - severity
+        - detected_at
+        - severity_score
+      properties:
+        id:
+          type: integer
+        road_name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        pothole_count:
+          type: integer
+        avg_diameter_cm:
+          type: number
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        severity_score:
+          type: number
+        detected_at:
+          type: string
+        original_image_url:
+          type: ["string", "null"]
+        detected_image_url:
+          type: ["string", "null"]
+        mask_image_url:
+          type: ["string", "null"]
+
+    DetectionInput:
+      type: object
+      required:
+        - road_name
+        - latitude
+        - longitude
+        - pothole_count
+        - avg_diameter_cm
+        - severity
+      properties:
+        road_name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        pothole_count:
+          type: integer
+        avg_diameter_cm:
+          type: number
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        severity_score:
+          type: number
+        original_image_url:
+          type: ["string", "null"]
+        detected_image_url:
+          type: ["string", "null"]
+        mask_image_url:
+          type: ["string", "null"]
+
+    Pothole:
+      type: object
+      required:
+        - id
+        - detection_id
+        - pothole_code
+        - diameter_cm
+        - area_m2
+        - perimeter_m
+        - mask_coverage
+        - confidence
+        - severity
+      properties:
+        id:
+          type: integer
+        detection_id:
+          type: integer
+        pothole_code:
+          type: string
+        diameter_cm:
+          type: number
+        area_m2:
+          type: number
+        perimeter_m:
+          type: number
+        mask_coverage:
+          type: number
+        confidence:
+          type: number
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+
+    RoadRanking:
+      type: object
+      required:
+        - worst
+        - best
+      properties:
+        worst:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadScore"
+        best:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadScore"
+
+    RoadScore:
+      type: object
+      required:
+        - rank
+        - road_name
+        - severity_score
+        - pothole_count
+        - dominant_severity
+      properties:
+        rank:
+          type: integer
+        road_name:
+          type: string
+        severity_score:
+          type: number
+        pothole_count:
+          type: integer
+        dominant_severity:
+          type: string
+
+    FeedItem:
+      type: object
+      required:
+        - id
+        - road_name
+        - pothole_count
+        - severity
+        - detected_at
+        - latitude
+        - longitude
+      properties:
+        id:
+          type: integer
+        road_name:
+          type: string
+        pothole_count:
+          type: integer
+        severity:
+          type: string
+        detected_at:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    DashboardSummary:
+      type: object
+      required:
+        - total_roads
+        - total_potholes
+        - critical_zones
+        - avg_diameter_cm
+        - last_detection_at
+        - severity_breakdown
+      properties:
+        total_roads:
+          type: integer
+        total_potholes:
+          type: integer
+        critical_zones:
+          type: integer
+        avg_diameter_cm:
+          type: number
+        last_detection_at:
+          type: ["string", "null"]
+        severity_breakdown:
+          type: object
+          properties:
+            Low:
+              type: integer
+            Medium:
+              type: integer
+            High:
+              type: integer
+            Critical:
+              type: integer
+          required: [Low, Medium, High, Critical]
