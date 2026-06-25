@@ -53,8 +53,8 @@ type SnapshotCache = {
 };
 
 const ARTIFACT_DIR = path.dirname(fileURLToPath(import.meta.url));
-// dist → api-server → artifacts → Road-Hazard-Dashboard(export) → ReplitExport → Road-Hazard-Dashboard(main)
-const MAIN_REPO_ROOT = path.resolve(ARTIFACT_DIR, "..", "..", "..", "..", "..");
+// dist → api-server → artifacts → Road-Hazard-Dashboard
+const MAIN_REPO_ROOT = path.resolve(ARTIFACT_DIR, "..", "..", "..");
 export const YOLO_DIR = process.env["COLAB_YOLO_DIR"] ?? path.join(MAIN_REPO_ROOT, "YOLO");
 export const DB_PATH = process.env["COLAB_DATABASE_PATH"] ?? path.join(YOLO_DIR, "database.db");
 const DB_DIR = path.dirname(DB_PATH);
