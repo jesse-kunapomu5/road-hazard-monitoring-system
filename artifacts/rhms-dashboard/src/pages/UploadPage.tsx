@@ -51,7 +51,7 @@ export function UploadPage() {
     setFile(f);
     setState("idle");
     setResult(null);
-    if (!locationId) setLocationId(`LOC-${Date.now().toString().slice(-4)}`);
+    if (!locationId) setLocationId(`Road-${Date.now().toString().slice(-4)}`);
   }
 
   function onDrop(e: React.DragEvent) {
@@ -171,7 +171,7 @@ export function UploadPage() {
                 type="text"
                 value={locationId}
                 onChange={e => setLocationId(e.target.value)}
-                placeholder="e.g. LOC006 or MG-Road-Hyd"
+                placeholder="e.g. MG Road Hyderabad, NH-48, LOC006…"
                 required
                 className="w-full rounded-xl border border-[#e8e4df] bg-[#faf8f5] px-3 py-2.5 text-sm text-[#2d2d2d] outline-none focus:border-[#2d4a7c] focus:ring-1 focus:ring-[#2d4a7c] transition-colors"
               />
